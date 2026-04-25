@@ -7,7 +7,7 @@ functions exposed here to extend sft's behaviour.
 
 from __future__ import annotations
 
-import importlib
+import importlib.metadata
 from typing import Any, Callable, Dict, List, Optional
 
 # --- Registries ---
@@ -79,7 +79,7 @@ def discover_plugins() -> None:
     """Discover and load all installed sft plugins via entry points."""
     try:
         eps = importlib.metadata.entry_points(group="sft.plugins")
-    except AttributeError:
+    except TypeError:
         # Python < 3.12 fallback
         eps = importlib.metadata.entry_points().get("sft.plugins", [])
 
