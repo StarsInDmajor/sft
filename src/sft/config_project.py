@@ -8,10 +8,11 @@ from typing import Any, Dict, List, Optional
 
 try:
     import tomllib
-
-    HAS_TOML = True
 except ImportError:
-    HAS_TOML = False
+    try:
+        import tomli as tomllib  # type: ignore[no-redef]
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
 
 from sft.ui import Theme
 
@@ -33,9 +34,9 @@ def load_project_config(src_dir: str) -> Dict[str, Any]:
     if not os.path.isfile(config_path):
         return {}
 
-    if not HAS_TOML:
+    if not tomllib:
         Theme.warning(
-            ".sftrc.toml found but tomllib unavailable (requires Python 3.11+)"
+            ".sftrc.toml found but no TOML parser available (install tomli for Python < 3.11)"
         )
         return {}
 

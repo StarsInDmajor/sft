@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "pulcerto" }]
-dependencies = ["pyyaml"]
+dependencies = ["pyyaml", "tomli ; python_version < '3.11'"]
 keywords = ["ssh", "transfer", "rsync", "remote", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
