@@ -61,7 +61,12 @@ def parse_args() -> argparse.Namespace:
             non_option_args.append(arg)
         i += 1
 
-    if non_option_args and non_option_args[0] in subcommands:
+    # Include plugin subcommands in the dispatch check
+    from sft.plugins import get_subcommands as _get_plugin_commands
+
+    all_subcommands = subcommands | set(_get_plugin_commands().keys())
+
+    if non_option_args and non_option_args[0] in all_subcommands:
         sub_cmd = non_option_args[0]
         subcommand_argv = list(non_option_args)
         executable_flags = [

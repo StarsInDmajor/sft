@@ -755,7 +755,7 @@ def perform_transfer(
     use_git_bundle = bool(
         git_root
         and (
-            args.full_flake or os.path.realpath(src.path) == os.path.realpath(git_root)
+            getattr(args, "full_flake", False) or os.path.realpath(src.path) == os.path.realpath(git_root)
         )
     )
 
