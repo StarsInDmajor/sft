@@ -1,0 +1,61 @@
+# SFT Configuration File
+# Place at ~/.config/sft/config.yaml
+#
+# This is the minimal configuration required to use sft.
+# At minimum you must define at least one host.
+
+# Host definitions — required
+hosts:
+  example-server:
+    hostname: "192.168.1.100"
+    port: 22
+    user: "your-username"
+    aliases: ["srv"]
+    description: "Example remote server"
+
+  # Multiple hosts supported:
+  # cluster:
+  #   hostname: "10.0.0.50"
+  #   port: 22
+  #   user: "your-username"
+  #   aliases: ["cl"]
+  #   scheduler: "pbs"  # optional: enables 'sft submit' for this host
+  #   extra_options:
+  #     IdentityFile: "~/.ssh/id_rsa"
+
+# Transfer settings (optional — defaults shown)
+transfer:
+  # Switch to archive+compression when file count exceeds this threshold
+  compression_threshold: 50
+
+  # zstd compression level (1-22, higher = better compression, slower)
+  zstd_level: 2
+
+  # rsync compression for WAN transfers
+  # Options: "auto" (compress for remote), "always", "never"
+  rsync_compression: "auto"
+
+  # Default rsync options
+  rsync_options:
+    - "-a"
+    - "--delete"
+    - "--partial"
+
+# SSH connection multiplexing (optional — defaults shown)
+ssh:
+  # Reuse SSH connections to reduce overhead
+  control_master: true
+
+  # ControlPath for connection sockets
+  control_path: "~/.ssh/sft-control-%h-%p-%r"
+
+  # Keep connections alive for N seconds after last use
+  control_persist: 600
+
+  # Connection timeout in seconds
+  connect_timeout: 30
+
+# Logging (optional — defaults shown)
+logging:
+  verbose: false
+  # log_file: ~/.local/state/sft/sft.log  # optional: enable file logging
