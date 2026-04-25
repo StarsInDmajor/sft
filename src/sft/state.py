@@ -129,8 +129,45 @@ def clean_stale_records() -> List[str]:
 
 
 def derive_mountpoint(host_name: str, remote_path: str) -> str:
-    basename = os.path.basename(remote_path.rstrip("/"))
-    return os.path.expanduser(f"~/mnt/{host_name}/{basename}")
+    """Derive local mountpoint that mirrors the full remote path structure.
+
+    Mounting ``/home/user/project`` on host ``wsl-rs`` yields
+    ``~/mnt/wsl-rs/home/user/project`` instead of ``~/mnt/wsl-rs/project``.
+    This makes path translation a simple prefix replacement.
+    """
+    clean = remote_path.strip("/")
+    return os.path.expanduser(f"~/mnt/{host_name}/{clean}")
+
+
+def remote_to_local(remote_path: str, host_name: str) -> str:
+    """Translate a remote absolute path to the local SSHFS mount path.
+
+    ``remote_to_local("/home/user/project/file.py", "wsl-rs")``
+    → ``~/mnt/wsl-rs/home/user/project/file.py``
+    """
+    local_base = os.path.expanduser(f"~/mnt/{host_name}")
+    if not remote_path.startswith("/"):
+        return remote_path
+    stripped = remote_path.lstrip("/")
+    if not stripped:
+        return local_base
+    return os.path.join(local_base, stripped)
+
+
+def local_to_remote(local_path: str, host_name: str) -> str:
+    """Translate a local SSHFS mount path back to the remote absolute path.
+
+    ``local_to_remote("~/mnt/wsl-rs/home/user/file.py", "wsl-rs")``
+    → ``/home/user/file.py``
+    """
+    local_base = os.path.expanduser(f"~/mnt/{host_name}")
+    abs_local = os.path.abspath(local_path)
+    abs_base = os.path.abspath(local_base)
+    if abs_local == abs_base:
+        return "/"
+    if abs_local.startswith(abs_base + "/"):
+        return "/" + os.path.relpath(abs_local, abs_base)
+    return local_path
 
 
 # --- Job state ---

@@ -880,3 +880,102 @@ class TestHostInfoScheduler(unittest.TestCase):
                 "scheduler", DEFAULT_CONFIG["hosts"][name],
                 f"{name} should not have scheduler field",
             )
+
+
+# --- Mount point and path translation tests ---
+
+
+from sft.state import derive_mountpoint, remote_to_local, local_to_remote
+
+
+class TestDeriveMountpoint(unittest.TestCase):
+    """Test the improved derive_mountpoint that mirrors full remote paths."""
+
+    def test_absolute_path_mirrored(self):
+        result = derive_mountpoint("wsl-rs", "/home/user/Workspace/project")
+        expected = os.path.expanduser("~/mnt/wsl-rs/home/user/Workspace/project")
+        self.assertEqual(result, expected)
+
+    def test_trailing_slash_stripped(self):
+        result = derive_mountpoint("host", "/path/to/dir/")
+        expected = os.path.expanduser("~/mnt/host/path/to/dir")
+        self.assertEqual(result, expected)
+
+    def test_short_path(self):
+        result = derive_mountpoint("myhost", "/project")
+        expected = os.path.expanduser("~/mnt/myhost/project")
+        self.assertEqual(result, expected)
+
+    def test_deep_nested_path(self):
+        result = derive_mountpoint("wsl-rs", "/home/pulcerto/Workspace/PRML/project1")
+        expected = os.path.expanduser(
+            "~/mnt/wsl-rs/home/pulcerto/Workspace/PRML/project1"
+        )
+        self.assertEqual(result, expected)
+
+    def test_different_hosts_dont_collide(self):
+        """Two hosts with same-named directories get different mount points."""
+        r1 = derive_mountpoint("host-a", "/home/user/project")
+        r2 = derive_mountpoint("host-b", "/home/user/project")
+        self.assertNotEqual(r1, r2)
+
+    def test_different_paths_dont_collide(self):
+        """Different remote paths on same host get different mount points."""
+        r1 = derive_mountpoint("wsl-rs", "/home/user/Workspace/project1")
+        r2 = derive_mountpoint("wsl-rs", "/home/user/code/project1")
+        self.assertNotEqual(r1, r2)
+
+
+class TestRemoteToLocal(unittest.TestCase):
+    """Test remote_to_local path translation."""
+
+    def test_translates_absolute_path(self):
+        result = remote_to_local("/home/user/project/file.py", "wsl-rs")
+        expected = os.path.expanduser("~/mnt/wsl-rs/home/user/project/file.py")
+        self.assertEqual(result, expected)
+
+    def test_translates_root(self):
+        result = remote_to_local("/", "host")
+        expected = os.path.expanduser("~/mnt/host")
+        self.assertEqual(result, expected)
+
+    def test_passes_through_relative_path(self):
+        result = remote_to_local("relative/path.py", "wsl-rs")
+        self.assertEqual(result, "relative/path.py")
+
+    def test_passes_through_empty_string(self):
+        result = remote_to_local("", "wsl-rs")
+        self.assertEqual(result, "")
+
+    def test_deep_path(self):
+        result = remote_to_local(
+            "/home/pulcerto/Workspace/PRML/project1/bgfs-baseline.py", "wsl-rs"
+        )
+        expected = os.path.expanduser(
+            "~/mnt/wsl-rs/home/pulcerto/Workspace/PRML/project1/bgfs-baseline.py"
+        )
+        self.assertEqual(result, expected)
+
+
+class TestLocalToRemote(unittest.TestCase):
+    """Test local_to_remote reverse path translation."""
+
+    def test_translates_local_to_remote(self):
+        local = os.path.expanduser("~/mnt/wsl-rs/home/user/project/file.py")
+        result = local_to_remote(local, "wsl-rs")
+        self.assertEqual(result, "/home/user/project/file.py")
+
+    def test_translates_mount_root(self):
+        local = os.path.expanduser("~/mnt/wsl-rs")
+        result = local_to_remote(local, "wsl-rs")
+        self.assertEqual(result, "/")
+
+    def test_passes_through_non_mount_path(self):
+        result = local_to_remote("/tmp/something", "wsl-rs")
+        self.assertEqual(result, "/tmp/something")
+
+    def test_roundtrip_with_remote_to_local(self):
+        remote = "/home/user/project/subdir/file.py"
+        local = remote_to_local(remote, "wsl-rs")
+        roundtrip = local_to_remote(local, "wsl-rs")
+        self.assertEqual(roundtrip, remote)
