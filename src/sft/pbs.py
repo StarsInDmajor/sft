@@ -39,7 +39,7 @@ PBS_STATE_MAP: Dict[str, str] = {
 class PbsJobInfo:
     """Parsed info from a single PBS job via qstat JSON output."""
 
-    job_id: str  # e.g. "320659.sirius"
+    job_id: str  # e.g. "12345.myserver"
     name: str
     state: str  # single-letter PBS state (Q/R/F/H/...)
     exit_status: Optional[int] = None  # NOTE: JSON key is "Exit_status" (capital E)
@@ -56,7 +56,7 @@ class PbsJobInfo:
 def parse_qstat_json(raw: str) -> Dict[str, PbsJobInfo]:
     """Parse ``qstat -xf -F json <job_ids>`` output.
 
-    Returns a dict keyed by PBS job ID (e.g. ``"320659.sirius"``).
+    Returns a dict keyed by PBS job ID (e.g. ``"12345.myserver"``).
 
     Empty response (unknown jobs) returns an empty dict — callers
     should treat missing keys as unknown jobs.
@@ -72,7 +72,7 @@ def parse_qstat_json(raw: str) -> Dict[str, PbsJobInfo]:
 
     results: Dict[str, PbsJobInfo] = {}
     for job_key, attrs in jobs_data.items():
-        # job_key is like "0:320659.sirius" or just "320659.sirius"
+        # job_key is like "0:12345.myserver" or just "12345.myserver"
         # Strip the leading index prefix if present
         job_id = job_key.split(":", 1)[-1] if ":" in job_key else job_key
 
@@ -99,7 +99,7 @@ def parse_qstat_json(raw: str) -> Dict[str, PbsJobInfo]:
 def parse_output_path(raw: Optional[str]) -> Optional[str]:
     """Strip the ``hostname:`` prefix from a PBS Output_Path value.
 
-    Example: ``"sirius:/home/user/job.out"`` → ``"/home/user/job.out"``
+    Example: ``"myserver:/home/user/job.out"`` → ``"/home/user/job.out"``
 
     Returns *None* if *raw* is *None*.
     """
@@ -193,7 +193,7 @@ def build_qsub_command(
 def parse_qsub_output(raw: str) -> Optional[str]:
     """Parse the job ID from ``qsub`` stdout.
 
-    Example output: ``"320659.sirius"``
+    Example output: ``"12345.myserver"``
 
     Returns *None* if parsing fails.
     """

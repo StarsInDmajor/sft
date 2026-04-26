@@ -9,7 +9,7 @@ description = "Smart File Transfer — SSH-based remote development CLI"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "pulcerto" }]
+authors = [{ name = "pulcerto", email = "pulcerto@users.noreply.github.com" }]
 dependencies = ["pyyaml", "tomli ; python_version < '3.11'"]
 keywords = ["ssh", "transfer", "rsync", "remote", "cli"]
 classifiers = [
@@ -17,16 +17,25 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: System :: Networking",
     "Topic :: Utilities",
 ]
+
+[project.urls]
+Homepage = "https://github.com/StarsInDmajor/sft"
+Repository = "https://github.com/StarsInDmajor/sft"
+Issues = "https://github.com/StarsInDmajor/sft/issues"
 
 [project.scripts]
 sft = "sft.cli:main"
 
 [project.optional-dependencies]
-yaml = ["pyyaml"]
 dev = ["pytest", "pyyaml"]
 
 [project.entry-points."sft.plugins"]

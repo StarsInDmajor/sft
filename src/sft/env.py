@@ -186,7 +186,13 @@ def resolve_env_source(
 def compute_remote_project_dir(
     local_project_root: str, remote_path: Optional[str]
 ) -> str:
-    """Compute the remote project directory path."""
+    """Compute the remote project directory path.
+
+    If *remote_path* is provided, it is returned as-is.  Otherwise the
+    local project directory name is used under ``~/Workspace/`` on the
+    remote host — this is a convention that matches the default directory
+    layout.  Users can override this by passing an explicit remote path.
+    """
     if remote_path:
         return remote_path
     project_name = os.path.basename(local_project_root.rstrip("/"))

@@ -19,12 +19,8 @@ from sft.config import (
 )
 from sft.env import (
     find_project_root,
-    find_envrc_dir_local,
-    parse_envrc_flake_full_local,
-    parse_envrc_flake_path_local,
     compute_remote_project_dir,
     compute_remote_flake_dir,
-    build_remote_execution_command,
 )
 from sft.manifest import (
     build_manifest,
@@ -163,136 +159,6 @@ class TestFindProjectRoot(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             result = find_project_root(str(tmp))
             self.assertIsNone(result)
-
-
-@unittest.skip("moved to sft-nix plugin")
-class TestFindEnvrcDirLocal(unittest.TestCase):
-    def test_finds_envrc_in_subdir(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            envrc_dir = Path(tmp) / "project"
-            envrc_dir.mkdir()
-            (Path(envrc_dir) / ".envrc").write_text("use flake /some/path")
-            result = find_envrc_dir_local(str(envrc_dir))
-            self.assertEqual(result, str(envrc_dir))
-
-    def test_no_envrc(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            result = find_envrc_dir_local(str(tmp))
-            self.assertIsNone(result)
-
-
-@unittest.skip("moved to sft-nix plugin")
-class TestParseEnvrcFlakeFullLocal(unittest.TestCase):
-    def test_parse_flake_with_flags(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / ".envrc").write_text("use flake /some/flake/path --impure\n")
-            result = parse_envrc_flake_full_local(str(tmp))
-            self.assertEqual(result, ("/some/flake/path", ["--impure"]))
-
-    def test_parse_flake_without_flags(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / ".envrc").write_text("use flake /simple/path\n")
-            result = parse_envrc_flake_full_local(str(tmp))
-            self.assertEqual(result, ("/simple/path", []))
-
-    def test_no_flake_line(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / ".envrc").write_text("use nix\n")
-            result = parse_envrc_flake_full_local(str(tmp))
-            self.assertIsNone(result)
-
-
-@unittest.skip("moved to sft-nix plugin")
-class TestParseEnvrcFlakePathLocal(unittest.TestCase):
-    def test_returns_path_only(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / ".envrc").write_text("use flake /some/path --impure\n")
-            result = parse_envrc_flake_path_local(str(tmp))
-            self.assertEqual(result, "/some/path")
-
-
-@unittest.skip("moved to sft-nix plugin")
-class TestBuildRemoteExecutionCommand(unittest.TestCase):
-    def test_with_env(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="python script.py",
-            env_exports="export FOO=bar ",
-            auto_env=True,
-            remote_flake_dir="/tmp/flake",
-            flake_flags=["--impure"],
-        )
-        self.assertIn("nix develop --impure", cmd)
-        self.assertIn("python script.py", cmd)
-
-    def test_without_env(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="python script.py",
-            env_exports="",
-            auto_env=False,
-            remote_flake_dir=None,
-        )
-        self.assertEqual(cmd, 'cd "$HOME/project" && python script.py')
-
-    def test_env_no_flake_dir(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="echo hello",
-            env_exports="",
-            auto_env=True,
-            remote_flake_dir=None,
-        )
-        self.assertNotIn("nix develop", cmd)
-
-    def test_single_quotes_in_command(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="echo \"it's working\"",
-            env_exports="",
-            auto_env=True,
-            remote_flake_dir="/tmp/flake",
-        )
-        self.assertIn("nix develop", cmd)
-        self.assertIn("cat >", cmd)
-        self.assertIn("SFT_SCRIPT_EOF", cmd)
-        self.assertIn("echo \"it's working\"", cmd)
-        self.assertNotIn("bash -lc", cmd)
-
-    def test_complex_shell_in_command(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="python -c 'import os; print(os.environ.get(\"FOO\", \"bar\"))'",
-            env_exports="",
-            auto_env=True,
-            remote_flake_dir="/tmp/flake",
-        )
-        self.assertIn("cat >", cmd)
-        self.assertIn("SFT_SCRIPT_EOF", cmd)
-        self.assertNotIn("bash -lc", cmd)
-
-    def test_with_build_timeout(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="python script.py",
-            env_exports="",
-            auto_env=True,
-            remote_flake_dir="/tmp/flake",
-            build_timeout=300,
-        )
-        self.assertIn("timeout 300 nix develop", cmd)
-        self.assertIn("timed out after 300s", cmd)
-
-    def test_without_build_timeout(self):
-        cmd = build_remote_execution_command(
-            remote_cwd="~/project",
-            user_command="python script.py",
-            env_exports="",
-            auto_env=True,
-            remote_flake_dir="/tmp/flake",
-            build_timeout=0,
-        )
-        self.assertNotIn("timeout", cmd)
 
 
 class TestComputeRemoteProjectDir(unittest.TestCase):
@@ -640,7 +506,7 @@ class TestPbsStateMapping(unittest.TestCase):
 class TestParseOutputPath(unittest.TestCase):
     def test_with_hostname_prefix(self):
         self.assertEqual(
-            parse_output_path("sirius:/home/user/job.out"),
+            parse_output_path("myserver:/home/user/job.out"),
             "/home/user/job.out",
         )
 
@@ -664,12 +530,12 @@ class TestParseQstatJson(unittest.TestCase):
             "timestamp": 1234567890,
             "pbs_version": "23.06.06",
             "Jobs": {
-                "0:320659.sirius": {
-                    "Job_Name": "21cm-4-5",
+                "0:320659.myserver": {
+                    "Job_Name": "myjob",
                     "job_state": "F",
                     "Exit_status": 0,
-                    "Output_Path": "sirius:/home/qszhong/share/21cm-4-5.out",
-                    "Error_Path": "sirius:/home/qszhong/share/21cm-4-5.err",
+                    "Output_Path": "myserver:/home/user/output/job.out",
+                    "Error_Path": "myserver:/home/user/output/job.err",
                     "Join_Path": "n",
                     "substate": 92,
                     "ctime": "1712566800",
@@ -682,10 +548,10 @@ class TestParseQstatJson(unittest.TestCase):
         })
         result = parse_qstat_json(raw)
         self.assertEqual(len(result), 1)
-        info = result["320659.sirius"]
+        info = result["320659.myserver"]
         self.assertIsInstance(info, PbsJobInfo)
-        self.assertEqual(info.job_id, "320659.sirius")
-        self.assertEqual(info.name, "21cm-4-5")
+        self.assertEqual(info.job_id, "320659.myserver")
+        self.assertEqual(info.name, "myjob")
         self.assertEqual(info.state, "F")
         self.assertEqual(info.exit_status, 0)
         self.assertFalse(info.join_output)
@@ -696,8 +562,8 @@ class TestParseQstatJson(unittest.TestCase):
             "timestamp": 1234567890,
             "pbs_version": "23.06.06",
             "Jobs": {
-                "1:310364.sirius": {
-                    "Job_Name": "SE3D_fit",
+                "1:310364.myserver": {
+                    "Job_Name": "fit_model",
                     "job_state": "R",
                     "Exit_status": None,
                     "substate": 42,
@@ -706,28 +572,28 @@ class TestParseQstatJson(unittest.TestCase):
         })
         result = parse_qstat_json(raw)
         self.assertEqual(len(result), 1)
-        info = result["310364.sirius"]
+        info = result["310364.myserver"]
         self.assertEqual(info.state, "R")
         self.assertIsNone(info.exit_status)
 
     def test_multiple_jobs(self):
         raw = json.dumps({
             "Jobs": {
-                "0:100.sirius": {"Job_Name": "a", "job_state": "R"},
-                "1:200.sirius": {"Job_Name": "b", "job_state": "Q"},
+                "0:100.myserver": {"Job_Name": "a", "job_state": "R"},
+                "1:200.myserver": {"Job_Name": "b", "job_state": "Q"},
             }
         })
         result = parse_qstat_json(raw)
         self.assertEqual(len(result), 2)
-        self.assertEqual(result["100.sirius"].state, "R")
-        self.assertEqual(result["200.sirius"].state, "Q")
+        self.assertEqual(result["100.myserver"].state, "R")
+        self.assertEqual(result["200.myserver"].state, "Q")
 
     def test_empty_response(self):
         """Unknown job IDs return empty Jobs dict."""
         raw = json.dumps({
             "timestamp": 1234567890,
             "pbs_version": "23.06.06",
-            "pbs_server": "sirius",
+            "pbs_server": "myserver",
         })
         result = parse_qstat_json(raw)
         self.assertEqual(result, {})
@@ -740,7 +606,7 @@ class TestParseQstatJson(unittest.TestCase):
         """Verify we read 'Exit_status' not 'exit_status' (capital E)."""
         raw = json.dumps({
             "Jobs": {
-                "0:999.sirius": {
+                "0:999.myserver": {
                     "Job_Name": "test",
                     "job_state": "F",
                     "Exit_status": 42,
@@ -748,12 +614,12 @@ class TestParseQstatJson(unittest.TestCase):
             }
         })
         result = parse_qstat_json(raw)
-        self.assertEqual(result["999.sirius"].exit_status, 42)
+        self.assertEqual(result["999.myserver"].exit_status, 42)
 
     def test_join_output_oe(self):
         raw = json.dumps({
             "Jobs": {
-                "0:100.sirius": {
+                "0:100.myserver": {
                     "Job_Name": "a",
                     "job_state": "R",
                     "Join_Path": "oe",
@@ -761,7 +627,7 @@ class TestParseQstatJson(unittest.TestCase):
             }
         })
         result = parse_qstat_json(raw)
-        self.assertTrue(result["100.sirius"].join_output)
+        self.assertTrue(result["100.myserver"].join_output)
 
 
 class TestBuildQsubCommand(unittest.TestCase):
@@ -832,7 +698,7 @@ class TestBuildQsubCommand(unittest.TestCase):
 
 class TestParseQsubOutput(unittest.TestCase):
     def test_standard_format(self):
-        self.assertEqual(parse_qsub_output("320659.sirius"), "320659.sirius")
+        self.assertEqual(parse_qsub_output("320659.myserver"), "320659.myserver")
 
     def test_number_only(self):
         self.assertEqual(parse_qsub_output("320659"), "320659")
@@ -841,7 +707,7 @@ class TestParseQsubOutput(unittest.TestCase):
         self.assertIsNone(parse_qsub_output(""))
 
     def test_whitespace(self):
-        self.assertEqual(parse_qsub_output("  320659.sirius\n"), "320659.sirius")
+        self.assertEqual(parse_qsub_output("  320659.myserver\n"), "320659.myserver")
 
     def test_garbage(self):
         self.assertIsNone(parse_qsub_output("some error message"))
@@ -863,24 +729,6 @@ class TestHostInfoScheduler(unittest.TestCase):
         )
         self.assertEqual(h.scheduler, "pbs")
 
-    @unittest.skip("moved to sft-nix plugin")
-    def test_default_config_has_pbs_hosts(self):
-        from sft.config import DEFAULT_CONFIG
-        for name in ("Sirus", "Sirus-off-campus", "Venus", "Venus-off-campus"):
-            self.assertEqual(
-                DEFAULT_CONFIG["hosts"][name].get("scheduler"), "pbs",
-                f"{name} should have scheduler='pbs'",
-            )
-
-    @unittest.skip("moved to sft-nix plugin")
-    def test_non_pbs_hosts_have_no_scheduler(self):
-        from sft.config import DEFAULT_CONFIG
-        for name in ("testhost", "testhost5", "testhost2", "testhost4", "testhost3"):
-            self.assertNotIn(
-                "scheduler", DEFAULT_CONFIG["hosts"][name],
-                f"{name} should not have scheduler field",
-            )
-
 
 # --- Mount point and path translation tests ---
 
@@ -892,8 +740,8 @@ class TestDeriveMountpoint(unittest.TestCase):
     """Test the improved derive_mountpoint that mirrors full remote paths."""
 
     def test_absolute_path_mirrored(self):
-        result = derive_mountpoint("wsl-rs", "/home/user/Workspace/project")
-        expected = os.path.expanduser("~/mnt/wsl-rs/home/user/Workspace/project")
+        result = derive_mountpoint("myhost", "/home/user/Workspace/project")
+        expected = os.path.expanduser("~/mnt/myhost/home/user/Workspace/project")
         self.assertEqual(result, expected)
 
     def test_trailing_slash_stripped(self):
@@ -907,9 +755,9 @@ class TestDeriveMountpoint(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_deep_nested_path(self):
-        result = derive_mountpoint("wsl-rs", "/home/pulcerto/Workspace/PRML/project1")
+        result = derive_mountpoint("myhost", "/home/user/Workspace/myproject")
         expected = os.path.expanduser(
-            "~/mnt/wsl-rs/home/pulcerto/Workspace/PRML/project1"
+            "~/mnt/myhost/home/user/Workspace/myproject"
         )
         self.assertEqual(result, expected)
 
@@ -921,8 +769,8 @@ class TestDeriveMountpoint(unittest.TestCase):
 
     def test_different_paths_dont_collide(self):
         """Different remote paths on same host get different mount points."""
-        r1 = derive_mountpoint("wsl-rs", "/home/user/Workspace/project1")
-        r2 = derive_mountpoint("wsl-rs", "/home/user/code/project1")
+        r1 = derive_mountpoint("myhost", "/home/user/Workspace/project1")
+        r2 = derive_mountpoint("myhost", "/home/user/code/project1")
         self.assertNotEqual(r1, r2)
 
 
@@ -930,8 +778,8 @@ class TestRemoteToLocal(unittest.TestCase):
     """Test remote_to_local path translation."""
 
     def test_translates_absolute_path(self):
-        result = remote_to_local("/home/user/project/file.py", "wsl-rs")
-        expected = os.path.expanduser("~/mnt/wsl-rs/home/user/project/file.py")
+        result = remote_to_local("/home/user/project/file.py", "myhost")
+        expected = os.path.expanduser("~/mnt/myhost/home/user/project/file.py")
         self.assertEqual(result, expected)
 
     def test_translates_root(self):
@@ -940,19 +788,19 @@ class TestRemoteToLocal(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_passes_through_relative_path(self):
-        result = remote_to_local("relative/path.py", "wsl-rs")
+        result = remote_to_local("relative/path.py", "myhost")
         self.assertEqual(result, "relative/path.py")
 
     def test_passes_through_empty_string(self):
-        result = remote_to_local("", "wsl-rs")
+        result = remote_to_local("", "myhost")
         self.assertEqual(result, "")
 
     def test_deep_path(self):
         result = remote_to_local(
-            "/home/pulcerto/Workspace/PRML/project1/bgfs-baseline.py", "wsl-rs"
+            "/home/user/Workspace/myproject/main.py", "myhost"
         )
         expected = os.path.expanduser(
-            "~/mnt/wsl-rs/home/pulcerto/Workspace/PRML/project1/bgfs-baseline.py"
+            "~/mnt/myhost/home/user/Workspace/myproject/main.py"
         )
         self.assertEqual(result, expected)
 
@@ -961,21 +809,21 @@ class TestLocalToRemote(unittest.TestCase):
     """Test local_to_remote reverse path translation."""
 
     def test_translates_local_to_remote(self):
-        local = os.path.expanduser("~/mnt/wsl-rs/home/user/project/file.py")
-        result = local_to_remote(local, "wsl-rs")
+        local = os.path.expanduser("~/mnt/myhost/home/user/project/file.py")
+        result = local_to_remote(local, "myhost")
         self.assertEqual(result, "/home/user/project/file.py")
 
     def test_translates_mount_root(self):
-        local = os.path.expanduser("~/mnt/wsl-rs")
-        result = local_to_remote(local, "wsl-rs")
+        local = os.path.expanduser("~/mnt/myhost")
+        result = local_to_remote(local, "myhost")
         self.assertEqual(result, "/")
 
     def test_passes_through_non_mount_path(self):
-        result = local_to_remote("/tmp/something", "wsl-rs")
+        result = local_to_remote("/tmp/something", "myhost")
         self.assertEqual(result, "/tmp/something")
 
     def test_roundtrip_with_remote_to_local(self):
         remote = "/home/user/project/subdir/file.py"
-        local = remote_to_local(remote, "wsl-rs")
-        roundtrip = local_to_remote(local, "wsl-rs")
+        local = remote_to_local(remote, "myhost")
+        roundtrip = local_to_remote(local, "myhost")
         self.assertEqual(roundtrip, remote)

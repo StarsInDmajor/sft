@@ -13,14 +13,21 @@ SSH-based remote development CLI. Transfer files, mount directories, run command
 
 ## Installation
 
-### From PyPI (standalone)
+### From Git (recommended)
 
 ```bash
-pip install sft
+pip install git+https://github.com/StarsInDmajor/sft.git
 
-# With all plugins
-pip install sft sft-nix sft-marimo
+# With plugins
+pip install git+https://github.com/StarsInDmajor/sft-nix.git
+pip install git+https://github.com/StarsInDmajor/sft-marimo.git
 ```
+
+<!-- PyPI publishing coming soon -->
+<!-- ```bash -->
+<!-- pip install sft -->
+<!-- pip install sft sft-nix sft-marimo -->
+<!-- ``` -->
 
 ### Via Nix (recommended for NixOS users)
 
@@ -178,60 +185,34 @@ def add_my_parser(subparsers, global_parent):
 
 ## Development
 
-### Running Locally (no install needed)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
+
+### Quick Start
 
 ```bash
-cd ~/Workspace/sft
+# Install in editable mode with dev dependencies
+pip install -e ".[dev]"
 
 # Run CLI
-PYTHONPATH=src python3 -m sft --list-hosts
+sft --list-hosts
 
 # Run tests
-PYTHONPATH=src python3 -m unittest discover -s tests -v
-
-# With plugins loaded
-PYTHONPATH=~/Workspace/sft/src:~/Workspace/sft-nix/src:~/Workspace/sft-marimo/src \
-  python3 -m sft marimo start my-server:~/project
+pytest tests/ -v
 ```
 
-### NixOS Integration (dev workflow)
+### NixOS Integration
 
-When developing sft changes that need to be tested in the NixOS config:
+sft can be consumed as a Nix flake input:
 
-1. **Switch flake inputs to local paths** in `flake.nix`:
-   ```nix
-   sft.url = "path:/home/pulcerto/Workspace/sft";
-   sft-nix.url = "path:/home/pulcerto/Workspace/sft-nix";
-   sft-marimo.url = "path:/home/pulcerto/Workspace/sft-marimo";
-   ```
-
-2. **Edit → build → test**:
-   ```bash
-   vim ~/Workspace/sft/src/sft/cli.py
-   cd ~/nixos-config && nrs   # or hms
-   ```
-
-3. **When done**, switch back to GitHub URLs, push, update lock:
-   ```nix
-   sft.url = "github:StarsInDmajor/sft";
-   ```
-   ```bash
-   cd ~/Workspace/sft && git push
-   cd ~/nixos-config && nix flake lock --update-input sft
-   ```
-
-### Testing
-
-```bash
-# All tests
-PYTHONPATH=src python3 -m unittest discover -s tests -v
-
-# Single test file
-PYTHONPATH=src python3 -m unittest tests.test_pure -v
-
-# Single test
-PYTHONPATH=src python3 -m unittest tests.test_pure.TestConfig.test_load_config -v
+```nix
+inputs = {
+  sft.url = "github:StarsInDmajor/sft";
+  sft-nix.url = "github:StarsInDmajor/sft-nix";
+  sft-marimo.url = "github:StarsInDmajor/sft-marimo";
+};
 ```
+
+For local development, use path-based inputs and your normal NixOS rebuild workflow.
 
 ## Project Structure
 

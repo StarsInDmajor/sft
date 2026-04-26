@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import time
 from typing import Any, Optional
@@ -62,7 +63,11 @@ class Theme:
 
 
 class Spinner:
-    """Simple thread-based spinner for CLI."""
+    """Simple thread-based spinner for CLI.
+
+    Only activates when stdout is a TTY. In non-interactive environments
+    (CI, pipes), operations run silently.
+    """
 
     def __init__(self, message: str, icon: str = Theme.SCAN):
         self.message = message
@@ -70,17 +75,21 @@ class Spinner:
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self._spin, daemon=True)
         self.start_time = 0.0
+        self._is_tty = sys.stdout.isatty()
 
     def __enter__(self):
         self.start_time = time.time()
-        self.thread.start()
+        if self._is_tty:
+            self.thread.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop_event.set()
-        self.thread.join()
+        if self._is_tty:
+            self.stop_event.set()
+            self.thread.join()
+            print(f"\r{' ' * self._get_terminal_width()}\r", end="")
+
         duration = time.time() - self.start_time
-        print(f"\r{' ' * self._get_terminal_width()}\r", end="")
 
         if exc_type:
             return False

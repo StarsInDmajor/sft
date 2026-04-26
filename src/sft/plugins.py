@@ -80,7 +80,7 @@ def discover_plugins() -> None:
     try:
         eps = importlib.metadata.entry_points(group="sft.plugins")
     except TypeError:
-        # Python < 3.12 fallback
+        # Python < 3.12 fallback: entry_points() returns a dict-like object
         eps = importlib.metadata.entry_points().get("sft.plugins", [])
 
     for ep in eps:

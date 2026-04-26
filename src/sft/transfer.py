@@ -67,7 +67,7 @@ def count_files_remote(
     ) % json.dumps(path)
     output = ctx.run_ssh(
         target.host,
-        f"python - <<'PY'\n{script}\nPY",
+        f"python3 - <<'PY'\n{script}\nPY",
         capture=True,
         allow_dry_run_execute=allow_dry_run_execute,
     )

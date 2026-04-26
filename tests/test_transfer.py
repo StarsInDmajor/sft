@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 from sft.config import HostInfo, ParsedTarget, SftConfig
 from sft.context import ExecutionContext
 
-WSL_RS = HostInfo(
+TEST_HOST_1 = HostInfo(
     name="testhost",
     hostname="10.0.0.1",
     port=2222,
@@ -22,7 +22,7 @@ WSL_RS = HostInfo(
     extra_options={},
 )
 
-BETELGEUSE = HostInfo(
+TEST_HOST_2 = HostInfo(
     name="testhost2",
     hostname="10.0.0.2",
     port=22,
@@ -116,7 +116,7 @@ class TestDetectGitRepo(unittest.TestCase):
         ctx.run_ssh = MagicMock(return_value="/home/user/proj")
 
         target = ParsedTarget(
-            is_remote=True, path="~/proj", host=WSL_RS, user_override=None
+            is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None
         )
 
         from sft.transfer import detect_git_repo
@@ -130,7 +130,7 @@ class TestDetectGitRepo(unittest.TestCase):
         ctx.run_ssh = MagicMock(side_effect=RuntimeError("not a git repo"))
 
         target = ParsedTarget(
-            is_remote=True, path="~/proj", host=WSL_RS, user_override=None
+            is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None
         )
 
         from sft.transfer import detect_git_repo
@@ -241,7 +241,7 @@ class TestCopySingleFile(unittest.TestCase):
         ctx = _make_ctx()
         ctx.scp_from_remote = MagicMock()
 
-        src_target = ParsedTarget(is_remote=True, path="~/file.txt", host=WSL_RS, user_override=None)
+        src_target = ParsedTarget(is_remote=True, path="~/file.txt", host=TEST_HOST_1, user_override=None)
         dst_target = ParsedTarget(is_remote=False, path="/tmp/dst.txt", host=None, user_override=None)
 
         from sft.transfer import copy_single_file
@@ -255,7 +255,7 @@ class TestCopySingleFile(unittest.TestCase):
         ctx.run_ssh = MagicMock()
 
         src_target = ParsedTarget(is_remote=False, path="/tmp/src.txt", host=None, user_override=None)
-        dst_target = ParsedTarget(is_remote=True, path="~/dst.txt", host=WSL_RS, user_override=None)
+        dst_target = ParsedTarget(is_remote=True, path="~/dst.txt", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import copy_single_file
 
@@ -268,8 +268,8 @@ class TestCopySingleFile(unittest.TestCase):
         ctx.scp_to_remote = MagicMock()
         ctx.run_ssh = MagicMock()
 
-        src_target = ParsedTarget(is_remote=True, path="~/src.txt", host=WSL_RS, user_override=None)
-        dst_target = ParsedTarget(is_remote=True, path="~/dst.txt", host=BETELGEUSE, user_override=None)
+        src_target = ParsedTarget(is_remote=True, path="~/src.txt", host=TEST_HOST_1, user_override=None)
+        dst_target = ParsedTarget(is_remote=True, path="~/dst.txt", host=TEST_HOST_2, user_override=None)
 
         from sft.transfer import copy_single_file
 
@@ -312,7 +312,7 @@ class TestRunRegularRsync(unittest.TestCase):
             src = Path(tmp) / "src"
             src.mkdir()
 
-            run_regular_rsync(str(src), "~/dst", None, WSL_RS, ctx)
+            run_regular_rsync(str(src), "~/dst", None, TEST_HOST_1, ctx)
             mock_run.assert_called_once()
             args = mock_run.call_args[0][0]
             self.assertEqual(args[0], "rsync")
@@ -331,7 +331,7 @@ class TestRunRegularRsync(unittest.TestCase):
             dst = Path(tmp) / "dst"
             dst.mkdir()
 
-            run_regular_rsync("~/src", str(dst), WSL_RS, None, ctx)
+            run_regular_rsync("~/src", str(dst), TEST_HOST_1, None, ctx)
             mock_run.assert_called_once()
 
     @patch("sft.transfer.subprocess.run")
@@ -343,7 +343,7 @@ class TestRunRegularRsync(unittest.TestCase):
 
         from sft.transfer import run_regular_rsync
 
-        run_regular_rsync("~/src", "~/dst", WSL_RS, BETELGEUSE, ctx)
+        run_regular_rsync("~/src", "~/dst", TEST_HOST_1, TEST_HOST_2, ctx)
         mock_run.assert_called_once()
         env = mock_run.call_args[1]["env"]
         self.assertIn("RSYNC_RSH", env)
@@ -361,7 +361,7 @@ class TestRunRegularRsync(unittest.TestCase):
             src = Path(tmp) / "src"
             src.mkdir()
 
-            run_regular_rsync(str(src), "~/dst", None, WSL_RS, ctx)
+            run_regular_rsync(str(src), "~/dst", None, TEST_HOST_1, ctx)
             args = mock_run.call_args[0][0]
             self.assertIn("--compress", args)
 
@@ -380,7 +380,7 @@ class TestRunRegularRsync(unittest.TestCase):
             src = Path(tmp) / "src"
             src.mkdir()
 
-            run_regular_rsync(str(src), "~/dst", None, WSL_RS, ctx)
+            run_regular_rsync(str(src), "~/dst", None, TEST_HOST_1, ctx)
             args = mock_run.call_args[0][0]
             self.assertNotIn("--compress", args)
 
@@ -391,7 +391,7 @@ class TestRunRegularRsync(unittest.TestCase):
 
         from sft.transfer import run_regular_rsync
 
-        run_regular_rsync("~/src", "~/dst", WSL_RS, BETELGEUSE, ctx)
+        run_regular_rsync("~/src", "~/dst", TEST_HOST_1, TEST_HOST_2, ctx)
         ctx.log.assert_called()
 
     @patch("sft.transfer.subprocess.run")
@@ -428,7 +428,7 @@ class TestProbeSourceRemote(unittest.TestCase):
             })
         )
 
-        target = ParsedTarget(is_remote=True, path="~/proj", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import probe_source_remote
 
@@ -449,7 +449,7 @@ class TestProbeSourceRemote(unittest.TestCase):
             })
         )
 
-        target = ParsedTarget(is_remote=True, path="~/file.txt", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/file.txt", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import probe_source_remote
 
@@ -470,7 +470,7 @@ class TestProbeSourceRemote(unittest.TestCase):
             })
         )
 
-        target = ParsedTarget(is_remote=True, path="~/missing", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/missing", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import probe_source_remote
 
@@ -481,7 +481,7 @@ class TestProbeSourceRemote(unittest.TestCase):
         ctx = _make_ctx()
         ctx.run_ssh = MagicMock(side_effect=RuntimeError("connection refused"))
 
-        target = ParsedTarget(is_remote=True, path="~/proj", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import probe_source_remote
 
@@ -495,7 +495,7 @@ class TestHasGitRefs(unittest.TestCase):
         ctx = _make_ctx()
         ctx.run_ssh = MagicMock(return_value="abc123 HEAD\n")
 
-        target = ParsedTarget(is_remote=True, path="~/proj", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import has_git_refs
 
@@ -505,7 +505,7 @@ class TestHasGitRefs(unittest.TestCase):
         ctx = _make_ctx()
         ctx.run_ssh = MagicMock(return_value="")
 
-        target = ParsedTarget(is_remote=True, path="~/proj", host=WSL_RS, user_override=None)
+        target = ParsedTarget(is_remote=True, path="~/proj", host=TEST_HOST_1, user_override=None)
 
         from sft.transfer import has_git_refs
 
