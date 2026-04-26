@@ -1,5 +1,7 @@
 # sft — Smart File Transfer
 
+**English** | [中文](README.zh-CN.md)
+
 SSH-based remote development CLI. Transfer files, mount directories, run commands, and manage background jobs on remote hosts.
 
 ## Features
