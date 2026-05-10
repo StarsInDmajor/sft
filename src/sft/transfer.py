@@ -141,17 +141,23 @@ def create_local_archive(path: str, ctx: ExecutionContext) -> Tuple[str, Path]:
     ]
 
     tar_proc = subprocess.Popen(tar_cmd, stdout=subprocess.PIPE)
-    zstd_proc = subprocess.Popen(zstd_cmd, stdin=tar_proc.stdout)
+    zstd_proc = subprocess.Popen(
+        zstd_cmd, stdin=tar_proc.stdout, stderr=subprocess.PIPE
+    )
     if tar_proc.stdout:
         tar_proc.stdout.close()
 
+    _, zstd_stderr = zstd_proc.communicate()
     tar_returncode = tar_proc.wait()
-    zstd_returncode = zstd_proc.wait()
+    zstd_returncode = zstd_proc.returncode
 
     if tar_returncode != 0:
         raise RuntimeError(f"tar failed with code {tar_returncode}")
     if zstd_returncode != 0:
-        raise RuntimeError(f"zstd compression failed with code {zstd_returncode}")
+        detail = zstd_stderr.decode(errors="replace").strip()
+        raise RuntimeError(
+            f"zstd compression failed with code {zstd_returncode}: {detail}"
+        )
 
     ctx.log(f"Created archive {zst_path}")
     return str(zst_path), temp_dir

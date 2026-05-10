@@ -88,6 +88,29 @@ def parse_envrc_flake_full_remote(
     return None
 
 
+def find_all_envrc_dirs_local(path: str) -> list:
+    """Find all directories containing .envrc under *path* (recursive).
+
+    Returns an empty list by default.  The ``sft-nix`` plugin overrides
+    this to actually walk the directory tree.
+    """
+    return []
+
+
+def find_all_envrc_dirs_remote(
+    target: ParsedTarget,
+    ctx: ExecutionContext,
+    *,
+    allow_dry_run_execute: bool = False,
+) -> list:
+    """Find all directories containing .envrc on remote host (recursive).
+
+    Returns an empty list by default.  The ``sft-nix`` plugin overrides
+    this to actually walk the remote directory tree.
+    """
+    return []
+
+
 def compute_envrc_target_dir(source_base: str, envrc_dir: str, dest_base: str) -> str:
     """Compute where envrc-related files should land relative to dest."""
     try:
